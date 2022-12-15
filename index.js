@@ -7,6 +7,8 @@ const axios = require('axios').default;
 const sharp = require('sharp');
 const { Readable } = require('stream');
 
+const cron = require('node-cron');
+
 const { BlobServiceClient, ContainerClient } = require("@azure/storage-blob");
 const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING);
 const containerClient = blobServiceClient.getContainerClient('$web');
@@ -100,6 +102,9 @@ async function main() {
   console.log(companions);
 }
 
-main()
+cron.schedule('0 0 * * *', function() {
+  console.log('Running task...');
+  main()
   .then(() => console.log("Done"))
   .catch((ex) => console.log(ex.message));
+});
