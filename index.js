@@ -102,6 +102,7 @@ async function main() {
   console.log(companions);
 }
 
+console.log("Starting app...");
 cron.schedule('0 0 * * *', function() {
   console.log('Running task...');
   main()
