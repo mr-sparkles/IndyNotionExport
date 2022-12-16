@@ -85,7 +85,7 @@ async function refreshCompanionPictures(companionsResponse) {
         width: 500,
         height: 750,
         fit: sharp.fit.cover,
-        position: sharp.strategy.attention
+        position: sharp.gravity.center
       })
       .jpeg({quality: 80})
       .toBuffer();
@@ -114,12 +114,13 @@ console.log("Starting app...");
 
 if (process.argv.length > 2 && process.argv[2] == "--now")
 {
-  console.log('Running task...');
+  console.log(`[${(new Date()).toString()}] Running task...`);
   main()
   .then(() => console.log("Done"))
   .catch((ex) => console.log(ex.message));
 }
 else {
+  console.log('Waiting for cron job')
   cron.schedule('0 0 * * *', function() {
     console.log('Running task...');
     main()
