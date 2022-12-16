@@ -30,6 +30,7 @@ const containerClient = blobServiceClient.getContainerClient('$web');
 }
 
 async function getContributions() {
+  console.log('Getting contributions...')
   const d = new Date();
   const dateString = d.getFullYear().toString() + '-' + (d.getMonth()+1).toString().padStart(2, '0');
   const contributionsResponse = await collectPaginatedAPI(notion.databases.query, {database_id: process.env.NOTION_DATABASE_CONTRIBUTIONS});
@@ -38,15 +39,17 @@ async function getContributions() {
 
 async function getBannedKeywords()
 {
+  console.log('Getting banned keywords...')
   const bannedKeywordsResponse = await collectPaginatedAPI(notion.databases.query, {database_id: process.env.NOTION_DATABASE_KEYWORDS});
   return bannedKeywordsResponse.map(x => x.properties.Name.title[0].plain_text);
 }
 
 async function getCompanions(contributions, bannedKeywords) {
+  console.log('Getting companions...')
   const companionsResponse = await collectPaginatedAPI(notion.databases.query, { database_id: process.env.NOTION_DATABASE_COMPANIONS });
   const companions = companionsResponse.filter(x => contributions.includes(x.id) && x.properties.Picture.files.length > 0).map(x => ({id: x.id, name: x.properties.Name.title[0].plain_text, url: x.properties.Website.url, services: x.properties.Services.multi_select.map(y => y.name), race: x.properties.Race.multi_select.map(y => y.name), gender: x.properties.Gender.multi_select.map(y => y.name), catersto: x.properties['Caters to'].multi_select.map(y => y.name), age: x.properties.Age.multi_select.map(y => y.name), height: x.properties.Height.multi_select.map(y => y.name), tattoos: x.properties['Tattoos & mods'].multi_select.map(y => y.name), body_hair: x.properties['Body hair'].multi_select.map(y => y.name), tagline: x.properties.Tagline.rich_text.length > 0 ? x.properties.Tagline.rich_text[0].plain_text : null, keywords: x.properties.Keywords.rich_text.length > 0 ? x.properties.Keywords.rich_text[0].plain_text.toLowerCase() : null, location: x.properties.Location.multi_select.map(y => y.name)}))
 
-  refreshCompanionPictures(companionsResponse);
+  await refreshCompanionPictures(companionsResponse.filter(x => x.properties.Picture.files.length > 0));
 
   // Remove BannedKeywords
   bannedKeywords.forEach(function(bannedKeyword, i) {
@@ -64,8 +67,12 @@ async function getCompanions(contributions, bannedKeywords) {
 
 async function refreshCompanionPictures(companionsResponse) {
   // For each companion
-  for (const companion of companionsResponse.filter(x => x.properties.Picture.files.length > 0))
+  console.log('Refreshing pictures...')
+  for (const companion of companionsResponse)
   {
+      // Make sure there's a picture in there
+      if (companion.properties.Picture.files.length == 0) continue;
+
       const url = companion.properties.Picture.files[0].file.url;
       const blockBlobClient = containerClient.getBlockBlobClient(`img/companions/${companion.id}.jpg`);
       
@@ -78,14 +85,15 @@ async function refreshCompanionPictures(companionsResponse) {
         width: 500,
         height: 750,
         fit: sharp.fit.cover,
-        position: sharp.strategy.entropy
+        position: sharp.strategy.attention
       })
-      .jpeg({quality: 85})
+      .jpeg({quality: 80})
       .toBuffer();
 
       // Upload to Azure Storage
       const uploadResponse = await blockBlobClient.uploadStream(bufferToStream(resizedImage)); 
   };
+  console.log(`Done. Refreshed ${companionsResponse.length} pictures`)
 }
 
 async function main() {
@@ -99,13 +107,23 @@ async function main() {
   const blockBlobClient = containerClient.getBlockBlobClient('companions.json');
   await blockBlobClient.upload(companionsString, companionsString.length);
 
-  console.log(companions);
+  console.log(`Updated ${companions.length} companions.`);
 }
 
 console.log("Starting app...");
-cron.schedule('0 0 * * *', function() {
+
+if (process.argv.length > 2 && process.argv[2] == "--now")
+{
   console.log('Running task...');
   main()
   .then(() => console.log("Done"))
   .catch((ex) => console.log(ex.message));
-});
+}
+else {
+  cron.schedule('0 0 * * *', function() {
+    console.log('Running task...');
+    main()
+    .then(() => console.log("Done"))
+    .catch((ex) => console.log(ex.message));
+  });
+}
