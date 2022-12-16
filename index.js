@@ -49,7 +49,9 @@ async function getCompanions(contributions, bannedKeywords) {
   const companionsResponse = await collectPaginatedAPI(notion.databases.query, { database_id: process.env.NOTION_DATABASE_COMPANIONS });
   const companions = companionsResponse.filter(x => contributions.includes(x.id) && x.properties.Picture.files.length > 0).map(x => ({id: x.id, name: x.properties.Name.title[0].plain_text, url: x.properties.Website.url, services: x.properties.Services.multi_select.map(y => y.name), race: x.properties.Race.multi_select.map(y => y.name), gender: x.properties.Gender.multi_select.map(y => y.name), catersto: x.properties['Caters to'].multi_select.map(y => y.name), age: x.properties.Age.multi_select.map(y => y.name), body_type: x.properties["Body type"].multi_select.map(y => y.name), height: x.properties.Height.multi_select.map(y => y.name), tattoos: x.properties['Tattoos & mods'].multi_select.map(y => y.name), body_hair: x.properties['Body hair'].multi_select.map(y => y.name), tagline: x.properties.Tagline.rich_text.length > 0 ? x.properties.Tagline.rich_text[0].plain_text : null, keywords: x.properties.Keywords.rich_text.length > 0 ? x.properties.Keywords.rich_text[0].plain_text.toLowerCase() : null, location: x.properties.Location.multi_select.map(y => y.name)}))
 
-  await refreshCompanionPictures(companionsResponse.filter(x => x.properties.Picture.files.length > 0));
+  if (!process.argv.includes('--skip-pictures')) {
+    await refreshCompanionPictures(companionsResponse.filter(x => x.properties.Picture.files.length > 0));
+  }
 
   // Remove BannedKeywords
   bannedKeywords.forEach(function(bannedKeyword, i) {
@@ -112,7 +114,7 @@ async function main() {
 
 console.log("Starting app...");
 
-if (process.argv.length > 2 && process.argv[2] == "--now")
+if (process.argv.includes('--now'))
 {
   console.log(`[${(new Date()).toString()}] Running task...`);
   main()
@@ -121,7 +123,7 @@ if (process.argv.length > 2 && process.argv[2] == "--now")
 }
 else {
   console.log('Waiting for cron job')
-  cron.schedule('0 0 * * *', function() {
+  cron.schedule('0 */4 * * *', function() {
     console.log('Running task...');
     main()
     .then(() => console.log("Done"))
