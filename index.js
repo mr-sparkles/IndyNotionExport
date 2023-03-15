@@ -81,19 +81,23 @@ async function refreshCompanionPictures(companionsResponse) {
       // Get picture from Notion
       const response = await axios.get(url, {responseType: "arraybuffer"});
 
-      // Resize
-      const resizedImage = await sharp(response.data)
-      .resize({
-        width: 500,
-        height: 750,
-        fit: sharp.fit.cover,
-        position: sharp.strategy.attention
-      })
-      .jpeg({quality: 80})
-      .toBuffer();
+      try {
+        // Resize picture
+        const resizedImage = await sharp(response.data)
+        .resize({
+          width: 500,
+          height: 750,
+          fit: sharp.fit.cover,
+          position: sharp.strategy.attention
+        })
+        .jpeg({quality: 80})
+        .toBuffer();
 
-      // Upload to Azure Storage
-      const uploadResponse = await blockBlobClient.uploadStream(bufferToStream(resizedImage)); 
+        // Upload to Azure Storage
+        const uploadResponse = await blockBlobClient.uploadStream(bufferToStream(resizedImage));
+      } catch (ex) {
+        console.log(`[WARNING] Something went wrong with ${companion.properties.Name.title[0].plain_text}'s picture: ${ex.message}`);
+      }
   };
   console.log(`Done. Refreshed ${companionsResponse.length} pictures`)
 }
