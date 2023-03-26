@@ -128,7 +128,7 @@ if (process.argv.includes('--now'))
 else {
   console.log('Waiting for cron job')
   cron.schedule('0 */4 * * *', function() {
-    console.log(`[${date.now()}] Running task...`);
+    console.log(`[${(new Date()).toString()}] Running task...`);
     main()
     .then(() => console.log("Done"))
     .catch((ex) => console.log(ex.message));
