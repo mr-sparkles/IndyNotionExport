@@ -34,7 +34,7 @@ async function getContributions() {
   const d = new Date();
   const dateString = d.getFullYear().toString() + '-' + (d.getMonth()+1).toString().padStart(2, '0');
   const contributionsResponse = await collectPaginatedAPI(notion.databases.query, {database_id: process.env.NOTION_DATABASE_CONTRIBUTIONS});
-  return contributionsResponse.filter(x => x.properties.Lifetime.checkbox === true || x.properties[dateString].checkbox === true).map(x => x.properties['💋 Companion'].relation[0].id);
+  return contributionsResponse.filter(x => (x.properties.Lifetime.checkbox === true || x.properties[dateString].checkbox === true) && x.properties['💋 Companion'].relation.length > 0).map(x => x.properties['💋 Companion'].relation[0].id);
 }
 
 async function getBannedKeywords()
