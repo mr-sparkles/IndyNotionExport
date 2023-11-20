@@ -64,6 +64,13 @@ async function getCompanions(contributions, bannedKeywords) {
     });
   });
 
+  // Add extra keywords
+  companions.forEach(function(companion) {
+    if (companion.catersto.includes("Disabilities")) {
+      companion.keywords = companion.keywords + ", disability, disabilities";
+    }
+  });
+
   return companions;
 }
 
